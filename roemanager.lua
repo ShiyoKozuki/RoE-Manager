@@ -31,7 +31,7 @@ end
 
 local activeContent;
 local selectedROE;
-local filterText = { '' };
+local filterText = { '' }
 
 local dailyCheckDone = false
 local nextDailyCheck = 0
