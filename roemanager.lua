@@ -1,6 +1,6 @@
 addon.name      = 'RoEManager';
 addon.author    = 'Shiyo';
-addon.version   = '1.0.1.1';
+addon.version   = '1.0.2.0';
 addon.desc      = 'Manages and automatically flags records of eminence quests.';
 addon.link      = 'https://ashitaxi.com/';
 
@@ -22,11 +22,15 @@ local Player = {}
 Player.CurrentROE = {};
 Player.CompletedROE = {};
 
-local fullContent = T{};
-do
-    for id,name in pairs(ROE) do
-        fullContent:append({ Id=id, Name=name})
-    end
+local fullContent = T{}
+
+for id, roe in pairs(ROE) do
+    fullContent:append(roe)
+end
+
+local blockedROE = T{};
+for i = 3000,3060 do
+    blockedROE[i] = true;
 end
 
 local activeContent;
@@ -34,7 +38,6 @@ local selectedROE;
 local filterText = { '' }
 
 local dailyCheckDone = false
-local nextDailyCheck = 0
 
 -- Dailies missing from DAT:
     -- DAILY_VANQUISH_MULTIPLE = 4082,
@@ -130,66 +133,60 @@ local render_settings_ui = function()
   
 	-- imgui.SetNextWindowContentSize({ 430, 710 }); -- controls the size of the window
 
-    if (imgui.Begin(('RoE Manager Settings v%s'):fmt(addon.version), roeManager.ui.is_open, ImGuiWindowFlags_AlwaysAutoResize)) then
+    if imgui.Begin(('RoE Manager Settings v%s'):fmt(addon.version), roeManager.ui.is_open, ImGuiWindowFlags_AlwaysAutoResize) then
+
         if imgui.InputText('Search', filterText, 256) then
-            activeContent = nil;
+            activeContent = nil
         end
 
         if activeContent == nil then
-            activeContent = T{};
-            local filter = string.lower(filterText[1]);
-            for _,entry in ipairs(fullContent) do
-                if string.find(string.lower(entry.Name), filter, 1, true) then
-                    activeContent:append(entry);
+            activeContent = T{}
+            local filter = string.lower(filterText[1])
+
+            for _, entry in ipairs(fullContent) do
+                if string.find(string.lower(entry.name), filter, 1, true) then
+                    activeContent:append(entry)
                 end
             end
         end
 
-        imgui.BeginChild('roe', { 300, 220 });
-        for _,entry in ipairs(activeContent) do
-            if imgui.Selectable(entry.Name, selectedROE and (selectedROE.Id == entry.Id)) then
-                selectedROE = entry;
+        imgui.BeginChild('roe', { 300, 220 })
+
+        for _, entry in ipairs(activeContent) do
+            if imgui.Selectable(entry.name, selectedROE and (selectedROE.id == entry.id)) then
+                selectedROE = entry
             end
         end
-        imgui.EndChild();
+
+        imgui.EndChild()
 
         -- Buttons
         -- Flag
         if imgui.Button("Flag") and selectedROE then
-            FlagRoe(selectedROE.Id)
+            FlagRoe(selectedROE.id)
         end
 
         imgui.SameLine(0, 30)
 
         if imgui.Button("Flag (Multisend)") and selectedROE then
-            AshitaCore:GetChatManager():QueueCommand(0, ('/mss /rma flag %s'):fmt(selectedROE.Id));
+            AshitaCore:GetChatManager():QueueCommand(0, ('/mss /rma flag %s'):fmt(selectedROE.id));
         end
 
         -- Unflag
         if imgui.Button("Unflag") and selectedROE then
-            UnflagFlagRoe(selectedROE.Id)
+            UnflagFlagRoe(selectedROE.id)
         end
 
         imgui.SameLine(0, 16)
 
         if imgui.Button("Unflag (Multisend)") and selectedROE then
-            AshitaCore:GetChatManager():QueueCommand(0, ('/mss /rma unflag %s'):fmt(selectedROE.Id));
+            AshitaCore:GetChatManager():QueueCommand(0, ('/mss /rma unflag %s'):fmt(selectedROE.id));
         end
 
         -- Autoflag list (Dailies unity etc)
         if imgui.Button("Autoflag") then
             roeManager.ui.showAutoFlagWindow[1] = not roeManager.ui.showAutoFlagWindow[1]
         end
-
-        imgui.SameLine(0, 16)
-
-        local remaining = math.max(0, os.difftime(nextDailyCheck, os.time()))
-        local hours = math.floor(remaining / 3600)
-        local minutes = math.floor((remaining % 3600) / 60)
-        local seconds = math.floor(remaining % 60)
-
-        -- Timer for when dailies will be autoflagged
-        imgui.TextColored({ 1.0, 0.0, 0.0, 1.0 }, string.format('Next daily check: %s (%02d:%02d:%02d)', os.date('%I:%M %p', nextDailyCheck), hours, minutes, seconds))
 
         -- Extra Windows
         if roeManager.ui.showAutoFlagWindow[1] then
@@ -339,49 +336,50 @@ local function FlagRoeDailies()
             local numericId = tonumber(roeId)
 
             if numericId then
-
                 if Player.CurrentROE == nil then return end
 
-                local roeFlagged = false
+                if not blockedROE[roeId] then
+                    local roeFlagged = false
 
-                for i = 2, 31 do
-                    local roe = Player.CurrentROE[i]
+                    for i = 2, 31 do
+                        local roe = Player.CurrentROE[i]
 
-                    if roe ~= nil then
-                        if numericId ==  roe.Id then
-                            roeFlagged = true
-                            break
+                        if roe ~= nil then
+                            if numericId == roe.Id then
+                                roeFlagged = true
+                                break
+                            end
                         end
                     end
-                end
 
-                if not roeFlagged then
-                    local packet = struct.pack('LHH', 0, numericId, 0)
-                    AshitaCore:GetPacketManager():AddOutgoingPacket(0x10C, packet:totable())
-                    coroutine.sleep(3)
+                    if not roeFlagged then
+                        local packet = struct.pack('LHH', 0, numericId, 0)
+                        AshitaCore:GetPacketManager():AddOutgoingPacket(0x10C, packet:totable())
+                        coroutine.sleep(3)
+                    end
                 end
             end
         end
-    end
-
-    local now = os.time()
-    local today = os.date('*t', now)
-
-    today.hour = 11
-    today.min = 0
-    today.sec = 0
-
-    nextDailyCheck = os.time(today)
-
-    -- If 11 AM has already passed, schedule for tomorrow.
-    if nextDailyCheck <= now then
-        nextDailyCheck = nextDailyCheck + 86400
     end
 
     dailyCheckDone = true
 end
 
 ashita.events.register('packet_in', 'roe_incoming', function (e)
+    if (e.id == 0x110) then -- Sparks update cycles unity..
+        blockedROE = T{};
+        for i = 3000,3060 do
+            blockedROE[i] = true;
+        end
+
+        local byte = ashita.bits.unpack_be(e.data_raw, 0x0C, 0, 8);
+        local offset = 3000 + (byte * 9);
+        for i = offset,offset+8 do
+            blockedROE[i] = false;
+        end
+        blockedROE[3055+byte] = false;
+    end
+
     if (e.id == 0x111) then -- Flag / Unflagging RoE packet
         Player.CurrentROE = {};
         local id = ashita.bits.unpack_be(e.data_raw, 0x100, 0, 12);
@@ -405,9 +403,7 @@ ashita.events.register('packet_in', 'roe_incoming', function (e)
             end
         end
 
-        if os.time() > nextDailyCheck then
-            FlagRoeDailies()
-        end
+        FlagRoeDailies()
     end
 end)
 
