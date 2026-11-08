@@ -1,6 +1,6 @@
 addon.name      = 'RoEManager';
 addon.author    = 'Shiyo';
-addon.version   = '1.0.2.0';
+addon.version   = '1.0.2.1';
 addon.desc      = 'Manages and automatically flags records of eminence quests.';
 addon.link      = 'https://ashitaxi.com/';
 
@@ -36,8 +36,6 @@ end
 local activeContent;
 local selectedROE;
 local filterText = { '' }
-
-local dailyCheckDone = false
 
 -- Dailies missing from DAT:
     -- DAILY_VANQUISH_MULTIPLE = 4082,
@@ -361,8 +359,6 @@ local function FlagRoeDailies()
             end
         end
     end
-
-    dailyCheckDone = true
 end
 
 ashita.events.register('packet_in', 'roe_incoming', function (e)
@@ -459,11 +455,6 @@ ashita.events.register('d3d_present', 'd3d_present', function ()
         return
     end
 
-    if dailyCheckDone then
-        print(chat.header("RoEManager") .. chat.message("All selected dailies flagged!"))
-        dailyCheckDone = false
-    end
-    
     render_settings_ui();
 end);
 
