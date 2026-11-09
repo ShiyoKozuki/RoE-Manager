@@ -1,6 +1,6 @@
 addon.name      = 'RoEManager';
 addon.author    = 'Shiyo';
-addon.version   = '1.0.2.2';
+addon.version   = '1.0.2.3';
 addon.desc      = 'Manages and automatically flags records of eminence quests.';
 addon.link      = 'https://ashitaxi.com/';
 
@@ -336,7 +336,7 @@ local function FlagRoeDailies()
             if numericId then
                 if Player.CurrentROE == nil then return end
 
-                if not Player.Completed[roeId] and not blockedROE[roeId] then
+                if not Player.CompletedROE[roeId] and not blockedROE[roeId] then
                     local roeFlagged = false
 
                     for i = 2, 31 do
