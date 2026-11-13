@@ -1,6 +1,6 @@
 addon.name      = 'RoEManager';
 addon.author    = 'Shiyo';
-addon.version   = '1.0.2.3';
+addon.version   = '1.0.2.4';
 addon.desc      = 'Manages and automatically flags records of eminence quests.';
 addon.link      = 'https://ashitaxi.com/';
 
@@ -415,7 +415,7 @@ ashita.events.register('command', 'command_cb', function (e)
         return;
     end
 
-    if (args[2] == 'settings') or (args[2] == 'open') or (args[2] == 'help') or (args[2] == '?') then
+    if string.lower(args[2]) == 'settings' or string.lower(args[2]) == 'open' or string.lower(args[2]) == 'help' or (args[2] == '?') then
 		toggle_settings();
 		return
     end
